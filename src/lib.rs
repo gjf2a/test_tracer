@@ -108,6 +108,14 @@ impl CountdownTracer {
         result
     }
 
+    pub fn countdown_complete(&self) -> bool {
+        self.counts == 0
+    }
+
+    pub fn report(&self) {
+        println!("{} {:?}", self.counts, self.count_ptr.unwrap());
+    }
+
     pub fn iterate<H: GarbageCollectingHeap>(&mut self, allocator: &mut H) {
         let p = allocator.malloc(1, self).unwrap();
         allocator.store(p, 0).unwrap();
