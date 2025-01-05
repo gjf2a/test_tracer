@@ -16,11 +16,10 @@ impl Tracer for TestTracer {
 }
 
 impl TestTracer {
-    pub fn matches<H: GarbageCollectingHeap>(
-        &self,
-        allocator: &H,
-    ) -> bool {
-        self.allocations.iter().all(|p| allocator.is_allocated(p.block_num()))
+    pub fn matches<H: GarbageCollectingHeap>(&self, allocator: &H) -> bool {
+        self.allocations
+            .iter()
+            .all(|p| allocator.is_allocated(p.block_num()))
     }
 
     pub fn allocate_next<H: GarbageCollectingHeap>(
@@ -53,10 +52,7 @@ impl TestTracer {
         self.allocations.iter().map(|p| p.len()).sum()
     }
 
-    pub fn test_in_bounds<H: GarbageCollectingHeap>(
-        &self,
-        allocator: &mut H,
-    ) {
+    pub fn test_in_bounds<H: GarbageCollectingHeap>(&self, allocator: &mut H) {
         let mut value = 0;
         for p in self.allocations.iter() {
             let len = p.len();
@@ -81,5 +77,56 @@ impl TestTracer {
                 p = pt.next();
             }
         }
+    }
+}
+
+pub struct CountdownTracer {
+    counts: u64,
+    count_ptr: Option<Pointer>,
+}
+
+impl Tracer for CountdownTracer {
+    fn trace(&self, blocks_used: &mut [bool]) {
+        self.count_ptr.map(|p| {
+            blocks_used[p.block_num()] = true;
+        });
+    }
+}
+
+impl CountdownTracer {
+    pub fn new<H: GarbageCollectingHeap>(start: u64, allocator: &mut H) -> Self {
+        let mut result = Self {
+            counts: start,
+            count_ptr: None,
+        };
+        let literal_ptr = allocator.malloc(1, &mut result).unwrap();
+        allocator.store(literal_ptr, start).unwrap();
+        let stored = allocator.load(literal_ptr).unwrap();
+        let count_ptr = allocator.malloc(1, &mut result).unwrap();
+        allocator.store(count_ptr, stored).unwrap();
+        result.count_ptr = Some(count_ptr);
+        result
+    }
+
+    pub fn iterate<H: GarbageCollectingHeap>(&mut self, allocator: &mut H) {
+        let p = allocator.malloc(1, self).unwrap();
+        allocator.store(p, 0).unwrap();
+        let count = allocator.load(self.count_ptr.unwrap()).unwrap();
+        assert_eq!(count, self.counts);
+        let zero = allocator.load(p).unwrap();
+        assert_eq!(0, zero);
+        let p = allocator.malloc(1, self).unwrap();
+        allocator.store(p, 18446744073709551615).unwrap();
+        let p = allocator.malloc(1, self).unwrap();
+        allocator.store(p, 1).unwrap();
+
+        println!("looking up {:?}", self.count_ptr.unwrap());
+        let count = allocator.load(self.count_ptr.unwrap()).unwrap();
+        assert_eq!(count, self.counts);
+        let drop = allocator.load(p).unwrap();
+        self.counts -= drop;
+        let p = allocator.malloc(1, self).unwrap();
+        allocator.store(p, self.counts).unwrap();
+        self.count_ptr = Some(p);
     }
 }
