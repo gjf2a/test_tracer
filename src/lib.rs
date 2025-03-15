@@ -26,11 +26,11 @@ impl TestTracer {
         &mut self,
         request: usize,
         allocator: &mut H,
-    ) -> anyhow::Result<(), HeapError> {
+    ) -> anyhow::Result<Pointer, HeapError> {
         match allocator.malloc(request, self) {
             Ok(p) => {
                 self.allocations.push_back(p);
-                Ok(())
+                Ok(p)
             }
             Err(e) => Err(e),
         }
