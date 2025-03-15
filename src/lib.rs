@@ -16,12 +16,6 @@ impl Tracer for TestTracer {
 }
 
 impl TestTracer {
-    pub fn matches<H: GarbageCollectingHeap>(&self, allocator: &H) -> bool {
-        self.allocations
-            .iter()
-            .all(|p| allocator.allocated_block_ptr(p.block_num()).is_some())
-    }
-
     pub fn allocate_next<H: GarbageCollectingHeap>(
         &mut self,
         request: usize,
@@ -36,11 +30,14 @@ impl TestTracer {
         }
     }
 
-    pub fn deallocate_next_even(&mut self) {
+    pub fn deallocate_next_even(&mut self) -> Option<Pointer> {
         if self.allocations.len() >= 2 {
             let popped = self.allocations.pop_front().unwrap();
-            self.allocations.pop_front().unwrap();
+            let result = self.allocations.pop_front();
             self.allocations.push_back(popped);
+            result
+        } else {
+            None
         }
     }
 
@@ -50,25 +47,6 @@ impl TestTracer {
 
     pub fn total_allocated(&self) -> usize {
         self.allocations.iter().map(|p| p.len()).sum()
-    }
-
-    pub fn test_in_bounds<H: GarbageCollectingHeap>(&self, allocator: &mut H) {
-        let mut value = 0;
-        for p in self.allocations.iter() {
-            for pt in p.iter() {
-                allocator.store(pt, value).unwrap();
-                assert_eq!(value, allocator.load(pt).unwrap());
-                value += 1;
-            }
-        }
-
-        value = 0;
-        for p in self.allocations.iter() {
-            for pt in p.iter() {
-                assert_eq!(value, allocator.load(pt).unwrap());
-                value += 1;
-            }
-        }
     }
 }
 
