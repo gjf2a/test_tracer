@@ -55,26 +55,18 @@ impl TestTracer {
     pub fn test_in_bounds<H: GarbageCollectingHeap>(&self, allocator: &mut H) {
         let mut value = 0;
         for p in self.allocations.iter() {
-            let len = p.len();
-            let mut p = Some(*p);
-            for _ in 0..len {
-                let pt = p.unwrap();
+            for pt in *p {
                 allocator.store(pt, value).unwrap();
                 assert_eq!(value, allocator.load(pt).unwrap());
                 value += 1;
-                p = pt.next();
             }
         }
 
         value = 0;
         for p in self.allocations.iter() {
-            let len = p.len();
-            let mut p = Some(*p);
-            for _ in 0..len {
-                let pt = p.unwrap();
+            for pt in *p {
                 assert_eq!(value, allocator.load(pt).unwrap());
                 value += 1;
-                p = pt.next();
             }
         }
     }
