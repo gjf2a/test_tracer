@@ -19,7 +19,7 @@ impl TestTracer {
     pub fn matches<H: GarbageCollectingHeap>(&self, allocator: &H) -> bool {
         self.allocations
             .iter()
-            .all(|p| allocator.is_allocated(p.block_num()))
+            .all(|p| allocator.allocated_block_ptr(p.block_num()).is_some())
     }
 
     pub fn allocate_next<H: GarbageCollectingHeap>(
