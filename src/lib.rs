@@ -30,6 +30,10 @@ impl TestTracer {
         }
     }
 
+    pub fn deallocate_next(&mut self) -> Option<Pointer> {
+        self.allocations.pop_front()
+    }
+
     pub fn deallocate_next_even(&mut self) -> Option<Pointer> {
         if self.allocations.len() >= 2 {
             let popped = self.allocations.pop_front().unwrap();
