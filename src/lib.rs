@@ -34,6 +34,10 @@ impl TestTracer {
         self.allocations.pop_front()
     }
 
+    pub fn deallocate_any_that<F: Fn(Pointer)->bool>(&mut self, deallocate_condition: F) {
+        self.allocations = self.allocations.iter().filter(|p| !deallocate_condition(**p)).copied().collect();
+    }
+
     pub fn deallocate_next_even(&mut self) -> Option<Pointer> {
         if self.allocations.len() >= 2 {
             let popped = self.allocations.pop_front().unwrap();
